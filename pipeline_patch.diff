@@ -1,0 +1,247 @@
+--- pipeline_orig.py	2026-09-18 01:30:33.079743439 +0000
++++ pipeline_fixed.py	2026-09-18 01:31:26.259476082 +0000
+@@ -35,6 +35,15 @@
+ 
+ import os
+ import warnings
++
++# --- Determinism -------------------------------------------------------------
++# Seeding alone does NOT make the TensorFlow baseline reproducible: the
++# reduction order inside the kernels varies between runs, which moved this
++# model's GroupKFold R2 across a range of 18 percentage points at a fixed seed.
++# These variables must be set before TensorFlow is imported.
++os.environ.setdefault('PYTHONHASHSEED', '42')
++os.environ.setdefault('TF_DETERMINISTIC_OPS', '1')
++os.environ.setdefault('TF_CUDNN_DETERMINISTIC', '1')
+ import numpy as np
+ import pandas as pd
+ from scipy import stats
+@@ -42,7 +51,8 @@
+ from scipy.ndimage import uniform_filter1d
+ from scipy.stats import shapiro, normaltest, wilcoxon, gaussian_kde
+ 
+-from sklearn.model_selection import KFold, GroupKFold
++from sklearn.model_selection import (KFold, GroupKFold, GroupShuffleSplit,
++                                     train_test_split)
+ from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+ from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
+ from sklearn.linear_model import LinearRegression, Ridge
+@@ -67,6 +77,12 @@
+ from tensorflow.keras import layers, Model, callbacks, optimizers, regularizers
+ from tensorflow.keras import backend as K
+ 
++try:
++    tf.config.experimental.enable_op_determinism()
++    _TF_DETERMINISM = 'enabled'
++except Exception as _e:                      # TensorFlow < 2.9
++    _TF_DETERMINISM = f'UNAVAILABLE ({type(_e).__name__}); results will vary'
++
+ import matplotlib
+ matplotlib.use('Agg')
+ import matplotlib.pyplot as plt
+@@ -371,28 +387,47 @@
+                                            random_state=SEED, n_jobs=-1),
+     }
+ 
+-def fit_model(model, name, Xtr, ytr, Xva, yva):
+-    """Fit a single model with early stopping where applicable."""
+-    if name == 'XGBoost':
+-        model.fit(Xtr, ytr, eval_set=[(Xva, yva)], verbose=False)
+-    elif name == 'LightGBM':
+-        model.fit(Xtr, ytr, eval_set=[(Xva, yva)],
+-                  callbacks=[lgb.early_stopping(50, verbose=False)])
+-    elif name == 'CatBoost':
+-        model.fit(Xtr, ytr, eval_set=(Xva, yva),
+-                  early_stopping_rounds=50, verbose=0)
+-    else:
+-        model.fit(Xtr, ytr)
++def fit_model(model, name, Xtr, ytr, Xva=None, yva=None):
++    """Fit a single model on the training rows only.
++
++    The released version passed (Xva, yva) as `eval_set` with
++    early_stopping_rounds=50 for LightGBM and CatBoost. Because that pair is
++    the fold the model is then scored on, the number of boosting rounds was
++    selected on the evaluation data. No evaluation set is used here at all;
++    n_estimators is a tuned quantity from the nested search (range 300-1500),
++    which is what early stopping was standing in for.
++
++    Xva/yva are retained in the signature so existing call sites keep working;
++    they are deliberately ignored.
++    """
++    model.fit(Xtr, ytr)
+     return model
+ 
+-def inner_hpo(X_inner, y_inner, n_trials=N_HPO_TRIALS):
++def make_inner_splits(X, groups=None, inner_mode='kfold'):
++    """Inner-fold indices that honour the outer scheme.
++
++    The released version always used KFold(shuffle=True), so under GroupKFold
++    the hyperparameter search and the ensemble-weight OOF were still scoring
++    candidates on inner folds in which every design class appeared on both
++    sides. Group separation is now preserved through tuning as well as
++    through evaluation.
++    """
++    if inner_mode != 'group' or groups is None:
++        return list(KFold(n_splits=N_INNER_FOLDS, shuffle=True,
++                          random_state=SEED).split(X))
++    k = min(N_INNER_FOLDS, len(np.unique(groups)))
++    return list(GroupKFold(n_splits=k).split(X, groups=groups))
++
++
++def inner_hpo(X_inner, y_inner, groups_inner=None, inner_mode='kfold',
++              n_trials=N_HPO_TRIALS):
+     """Run Optuna HPO for XGBoost, LightGBM, CatBoost on inner CV.
+     Returns best_params dict. Called only on outer-training data."""
+-    inner_cv = KFold(n_splits=N_INNER_FOLDS, shuffle=True, random_state=SEED)
++    inner_splits = make_inner_splits(X_inner, groups_inner, inner_mode)
+ 
+     def _cv_score(model_fn, model_name):
+         scores = []
+-        for tr, va in inner_cv.split(X_inner):
++        for tr, va in inner_splits:
+             m = model_fn()
+             m = fit_model(m, model_name,
+                           X_inner[tr], y_inner[tr],
+@@ -412,9 +447,11 @@
+             'reg_alpha'       : trial.suggest_float('reg_alpha', 1e-7, 5.0, log=True),
+             'reg_lambda'      : trial.suggest_float('reg_lambda', 1e-7, 5.0, log=True),
+         }
++        # early_stopping_rounds is gone: fit_model no longer supplies an
++        # eval_set, and XGBoost raises if early stopping is asked for without
++        # one. n_estimators is searched over 300-1500 and carries the role.
+         return _cv_score(lambda: xgb.XGBRegressor(**p, random_state=SEED,
+-                                                    n_jobs=-1, verbosity=0,
+-                                                    early_stopping_rounds=30),
++                                                    n_jobs=-1, verbosity=0),
+                          'XGBoost')
+ 
+     # LightGBM
+@@ -467,7 +504,8 @@
+     w = np.abs(res.x); w /= w.sum()
+     return w
+ 
+-def run_outer_fold(df_fold, target, feat_list, outer_tr_idx, outer_va_idx):
++def run_outer_fold(df_fold, target, feat_list, outer_tr_idx, outer_va_idx,
++                   inner_mode='kfold', group_col='Concrete_Class'):
+     """
+     Execute one outer fold:
+       1. Preprocess (fold-local).
+@@ -487,14 +525,15 @@
+     Xva = va_proc[feat_list].values.astype(np.float32)
+     yva = va_proc[target].values.astype(np.float32)
+ 
+-    best_p = inner_hpo(Xtr, ytr)
++    groups_tr = tr_raw[group_col].values if inner_mode == 'group' else None
++    best_p = inner_hpo(Xtr, ytr, groups_tr, inner_mode)
+ 
+-    # Inner OOF for ensemble weight optimisation
+-    inner_cv = KFold(n_splits=N_INNER_FOLDS, shuffle=True, random_state=SEED)
++    # Inner OOF for ensemble weight optimisation, under the same grouping
++    inner_splits = make_inner_splits(Xtr, groups_tr, inner_mode)
+     model_names = ['XGBoost', 'LightGBM', 'CatBoost', 'ExtraTrees']
+     inner_oof = np.zeros((len(ytr), len(model_names)))
+ 
+-    for itr, iva in inner_cv.split(Xtr):
++    for itr, iva in inner_splits:
+         models_i = make_base_models(best_p['xgb'], best_p['lgb'], best_p['cb'])
+         for mi, (mname, m) in enumerate(models_i.items()):
+             m = fit_model(m, mname, Xtr[itr], ytr[itr], Xtr[iva], ytr[iva])
+@@ -506,7 +545,7 @@
+     models_final = make_base_models(best_p['xgb'], best_p['lgb'], best_p['cb'])
+     va_preds = {}
+     for mi, (mname, m) in enumerate(models_final.items()):
+-        m = fit_model(m, mname, Xtr, ytr, Xva, yva)
++        m = fit_model(m, mname, Xtr, ytr)      # no eval_set: see fit_model
+         va_preds[mname] = m.predict(Xva)
+ 
+     oof_stack_va = np.column_stack([va_preds[n] for n in model_names])
+@@ -537,9 +576,10 @@
+         fold_weights = []
+ 
+         split_kw = {'groups': groups} if scheme_name == 'group' else {}
++        inner_mode = 'group' if scheme_name == 'group' else 'kfold'
+         for tr_idx, va_idx in splitter.split(df, **split_kw):
+             _, ens_pred, va_preds, w, _ = run_outer_fold(
+-                df, target, feat_list, tr_idx, va_idx)
++                df, target, feat_list, tr_idx, va_idx, inner_mode=inner_mode)
+             y_oof[va_idx]  = ens_pred
+             for mname in per_model_oof:
+                 per_model_oof[mname][va_idx] = va_preds[mname]
+@@ -650,8 +690,7 @@
+         ytr = tr_proc['Strength_28d'].values.astype(np.float32)
+         Xva = va_proc[avail].values.astype(np.float32)
+         m = CatBoostRegressor(**CB_ABLATION_PARAMS, random_seed=SEED, verbose=0)
+-        m.fit(Xtr, ytr, eval_set=(Xva, va_proc['Strength_28d'].values.astype(np.float32)),
+-              early_stopping_rounds=50, verbose=0)
++        m.fit(Xtr, ytr, verbose=0)          # no eval_set: see fit_model
+         y_oof[va_idx] = m.predict(Xva)
+     r2_a  = r2_score(df_raw['Strength_28d'].values, y_oof)
+     rmse_a = np.sqrt(mean_squared_error(df_raw['Strength_28d'].values, y_oof))
+@@ -750,7 +789,8 @@
+     return model
+ 
+ def fit_mtl_fold(tr_proc, va_proc, feats, targets,
+-                 epochs=300, batch_size=32, verbose=0):
++                 epochs=300, batch_size=32, verbose=0,
++                 groups_tr=None):
+     """Fit MTL-PINN on one fold with feature & target standardization."""
+     sx = StandardScaler().fit(tr_proc[feats].values)
+     sy = {t: StandardScaler().fit(tr_proc[t].values.reshape(-1, 1))
+@@ -770,11 +810,26 @@
+     tf.random.set_seed(SEED)
+     model = build_mtl_pinn(len(feats))
+ 
++    # The released version passed (Xva, yva) -- the fold this model is scored
++    # on -- as validation_data, with restore_best_weights=True. That selects
++    # both the stopping epoch and the final weights on the evaluation data.
++    # The early-stopping split is carved out of the training rows instead, and
++    # respects the grouping when the outer split is group-aware.
++    _idx = np.arange(len(Xtr))
++    if groups_tr is not None and len(np.unique(groups_tr)) > 1:
++        _gss = GroupShuffleSplit(n_splits=1, test_size=0.15, random_state=SEED)
++        _fit_i, _es_i = next(_gss.split(_idx, groups=groups_tr))
++    else:
++        _fit_i, _es_i = train_test_split(_idx, test_size=0.15,
++                                         random_state=SEED)
++
+     cb_es = callbacks.EarlyStopping(monitor='val_loss', patience=40,
+                                      restore_best_weights=True, verbose=0)
+     cb_rl = callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5,
+                                          patience=20, min_lr=1e-5, verbose=0)
+-    model.fit(Xtr, ytr, validation_data=(Xva, yva),
++    model.fit(Xtr[_fit_i], {k: v[_fit_i] for k, v in ytr.items()},
++              validation_data=(Xtr[_es_i],
++                               {k: v[_es_i] for k, v in ytr.items()}),
+               epochs=epochs, batch_size=batch_size,
+               callbacks=[cb_es, cb_rl], verbose=verbose)
+ 
+@@ -926,8 +981,7 @@
+         yva = va_proc[target].values.astype(np.float32)
+ 
+         cb = CatBoostRegressor(**CB_ABLATION_PARAMS, random_seed=seed + b, verbose=0)
+-        cb.fit(Xtr, ytr, eval_set=(Xva, yva),
+-               early_stopping_rounds=30, verbose=0)
++        cb.fit(Xtr, ytr, verbose=0)         # no eval_set: see fit_model
+         yhat = cb.predict(Xva)
+ 
+         R2_list.append(r2_score(yva, yhat))
+@@ -1032,8 +1086,7 @@
+         ytr = tr_proc[target].values.astype(np.float32)
+         Xva = va_proc[avail].values.astype(np.float32)
+         m = CatBoostRegressor(**cb_params, random_seed=SEED, verbose=0)
+-        m.fit(Xtr, ytr, eval_set=(Xva, va_proc[target].values.astype(np.float32)),
+-              early_stopping_rounds=50, verbose=0)
++        m.fit(Xtr, ytr, verbose=0)          # no eval_set: see fit_model
+         y_oof[va_idx] = m.predict(Xva)
+     return r2_score(df[target].values, y_oof)
+ 
+@@ -1065,8 +1118,7 @@
+         ytr = tr_proc['Strength_28d'].values.astype(np.float32)
+         Xva = va_proc[avail].values.astype(np.float32)
+         m = CatBoostRegressor(**CB_ABLATION_PARAMS, random_seed=SEED, verbose=0)
+-        m.fit(Xtr, ytr, eval_set=(Xva, va_proc['Strength_28d'].values.astype(np.float32)),
+-              early_stopping_rounds=50, verbose=0)
++        m.fit(Xtr, ytr, verbose=0)          # no eval_set: see fit_model
+         y_oof_g[va_idx] = m.predict(Xva)
+     r2_gkf = r2_score(sub['Strength_28d'].values, y_oof_g)
+     S2_rows.append({
