@@ -1,0 +1,2 @@
+R2,RMSE,MAE,R2_XGBoost,R2_LightGBM,R2_CatBoost,R2_ExtraTrees,weights,jid,group,desc,target,outer,inner,es,encoding,group_col,n_features,minutes
+0.5860729809232414,7.0121603401562105,5.52932130739881,0.5458519726140522,0.575344196759398,0.6002972268221121,0.5322489272553419,"[0.1623, 0.3722, 0.4654, 0.0]",R5b,R5_1,"R5-1 matched inputs: ensemble on FEAT_MTL (26), GroupKFold",Strength_28d,group,group,none,freq,Concrete_Class,26,27.8

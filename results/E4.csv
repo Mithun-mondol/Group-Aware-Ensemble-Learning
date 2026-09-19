@@ -1,0 +1,2 @@
+R2,RMSE,MAE,R2_XGBoost,R2_LightGBM,R2_CatBoost,R2_ExtraTrees,weights,jid,group,desc,target,outer,inner,es,encoding,group_col,n_features,minutes
+0.7697517657424561,5.080140348584976,3.633404114762721,0.7719461262661794,0.7712184027108837,0.7603485973729989,0.7484233943238648,"[0.1993, 0.345, 0.2238, 0.2319]",E4,TARGETS,"f'c,7 standard CV, both fixes",Strength_7d,standard,kfold,none,freq,Concrete_Class,29,91.1

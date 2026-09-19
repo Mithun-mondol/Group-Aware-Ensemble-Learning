@@ -1,0 +1,60 @@
+configuration,rank,feature,mean_abs_shap
+Full (30 features),1,Strength_7d,5.286185740429914
+Full (30 features),2,Cement_sq,0.6333345462150957
+Full (30 features),3,Admix_Freq,0.4826692463439676
+Full (30 features),4,Concrete_Class_sq,0.46991988643891053
+Full (30 features),5,Cement_Freq,0.45125672129464384
+Full (30 features),6,WC_Ratio_sq,0.4050594980914536
+Full (30 features),7,WC_Ratio,0.3523274145883839
+Full (30 features),8,Slump_Retention,0.2954612977101404
+Full (30 features),9,Binder_Intensity,0.29169162049992786
+Full (30 features),10,Class_x_Cement,0.2658890058129527
+Full (30 features),11,Bolomey_Feature,0.26495582483087793
+Full (30 features),12,Slump_30,0.2516874535550706
+Full (30 features),13,Gel_Space_Ratio_28d,0.2276315419449134
+Full (30 features),14,WC_Ratio_inv,0.2175234131430605
+Full (30 features),15,Slump_Loss_Rate,0.20417559954638653
+Full (30 features),16,Class_x_WC,0.20052183375218527
+Full (30 features),17,Concrete_Class,0.18687327053621808
+Full (30 features),18,Admix_per_Cement,0.18555083100016717
+Full (30 features),19,Cement_Content,0.1821050233963841
+Full (30 features),20,Paste_Volume,0.18032981239068788
+Full (30 features),21,log_Cement,0.17934870366406713
+Full (30 features),22,Water_Content,0.1587081402923569
+Full (30 features),23,CA_FA_x_WC,0.1508278825286129
+Full (30 features),24,Cement_x_WC,0.12393304684711982
+Full (30 features),25,Admix_pct_bwoc,0.10137603686367759
+Full (30 features),26,CA_FA_Ratio,0.06811968213497076
+Full (30 features),27,Admixture_Dose,0.06364141934205203
+Full (30 features),28,FA,0.04830120416077667
+Full (30 features),29,CA,0.04419787139068482
+Full (30 features),30,Agg_Volume_Frac,0.0
+"No f'c,7 (29 feat.)",1,Cement_Freq,1.412724500759233
+"No f'c,7 (29 feat.)",2,log_Cement,0.9090278882865466
+"No f'c,7 (29 feat.)",3,Binder_Intensity,0.8592382286980637
+"No f'c,7 (29 feat.)",4,Bolomey_Feature,0.7950757588377892
+"No f'c,7 (29 feat.)",5,Concrete_Class,0.7077570274267122
+"No f'c,7 (29 feat.)",6,Class_x_WC,0.7072944750287646
+"No f'c,7 (29 feat.)",7,Slump_30,0.6085807926839149
+"No f'c,7 (29 feat.)",8,Slump_Retention,0.5927095063975725
+"No f'c,7 (29 feat.)",9,Admix_Freq,0.5680501951276041
+"No f'c,7 (29 feat.)",10,Concrete_Class_sq,0.5544361764124062
+"No f'c,7 (29 feat.)",11,Water_Content,0.40974226323011276
+"No f'c,7 (29 feat.)",12,Cement_Content,0.3908068595914144
+"No f'c,7 (29 feat.)",13,WC_Ratio_sq,0.3874040256030586
+"No f'c,7 (29 feat.)",14,Cement_sq,0.3805308223321882
+"No f'c,7 (29 feat.)",15,Cement_x_WC,0.3704509383512717
+"No f'c,7 (29 feat.)",16,Class_x_Cement,0.3578592389010503
+"No f'c,7 (29 feat.)",17,CA_FA_x_WC,0.34750497156852983
+"No f'c,7 (29 feat.)",18,Admix_per_Cement,0.3309816822874885
+"No f'c,7 (29 feat.)",19,Paste_Volume,0.29366175764046887
+"No f'c,7 (29 feat.)",20,Gel_Space_Ratio_28d,0.25831146232652574
+"No f'c,7 (29 feat.)",21,Slump_Loss_Rate,0.2553095929648215
+"No f'c,7 (29 feat.)",22,WC_Ratio,0.253639759413446
+"No f'c,7 (29 feat.)",23,WC_Ratio_inv,0.24397987379549113
+"No f'c,7 (29 feat.)",24,FA,0.2202511688576666
+"No f'c,7 (29 feat.)",25,CA_FA_Ratio,0.20235087461494308
+"No f'c,7 (29 feat.)",26,Admix_pct_bwoc,0.16509813586320837
+"No f'c,7 (29 feat.)",27,Admixture_Dose,0.16498327068817747
+"No f'c,7 (29 feat.)",28,CA,0.12278555829849677
+"No f'c,7 (29 feat.)",29,Agg_Volume_Frac,0.0

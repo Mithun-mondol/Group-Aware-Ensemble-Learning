@@ -1,0 +1,2 @@
+R2,RMSE,MAE,R2_XGBoost,R2_LightGBM,R2_CatBoost,R2_ExtraTrees,weights,jid,group,desc,target,outer,inner,es,encoding,group_col,n_features,minutes
+-0.37842613201346875,45.78200729721471,33.44288301093745,-0.3689612544789085,-0.3141925889737571,-0.4108055044002712,-0.2848160385811698,"[0.2916, 0.2674, 0.2802, 0.1608]",E2,TARGETS,"Slump_30 GroupKFold, both fixes",Slump_30,group,group,none,freq,Concrete_Class,25,44.5

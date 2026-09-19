@@ -1,0 +1,2 @@
+R2,RMSE,MAE,R2_XGBoost,R2_LightGBM,R2_CatBoost,R2_ExtraTrees,weights,jid,group,desc,target,outer,inner,es,encoding,group_col,n_features,minutes
+0.8519824928140471,4.193208843843229,3.326002302540211,0.8569918796441045,0.8337781624310157,0.836540305881287,0.8398488969946505,"[0.2235, 0.5103, 0.1199, 0.1463]",F1,R3_5,"R3-5: one-hot encoding, f'c,28 GroupKFold, both fixes",Strength_28d,group,group,none,onehot,Concrete_Class,30,43.1

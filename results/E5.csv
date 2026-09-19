@@ -1,0 +1,2 @@
+R2,RMSE,MAE,R2_XGBoost,R2_LightGBM,R2_CatBoost,R2_ExtraTrees,weights,jid,group,desc,target,outer,inner,es,encoding,group_col,n_features,minutes
+0.6485248654683324,23.11800664699478,14.28277391188815,0.6433753234013033,0.6475478688349832,0.6397566607708596,0.6575756696568985,"[0.2117, 0.0499, 0.6246, 0.1138]",E5,TARGETS,"Slump_30 standard CV, both fixes",Slump_30,standard,kfold,none,freq,Concrete_Class,25,80.8

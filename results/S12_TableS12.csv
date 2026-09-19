@@ -1,0 +1,19 @@
+block,variant,es,R2_standard,R2_group,mean_SMD,max_SMD
+encoding,Frequency (canonical),published,0.9200029964163754,0.8160927554913341,,
+encoding,One-hot,published,0.9208639577492856,0.8402954818048626,,
+encoding,No categoricals,published,0.9128907875956404,0.8321490641730083,,
+grouping,Random folds (no grouping),published,0.9200029964163754,,,
+grouping,Design class (8),published,,0.8160927554913341,,
+grouping,Cement brand (10),published,,0.87251735575126,,
+grouping,Admixture type (14),published,,0.901080508804592,,
+class_ablation,All class features removed,published,0.919536788739836,0.8162803887399759,,
+encoding,Frequency (canonical),none,0.9173393427827624,0.8130148935734507,,
+encoding,One-hot,none,0.9184068953093296,0.8354264455070342,,
+encoding,No categoricals,none,0.9113079299130602,0.8255712212104228,,
+grouping,Random folds (no grouping),none,0.9173393427827624,,,
+grouping,Design class (8),none,,0.8130148935734507,,
+grouping,Cement brand (10),none,,0.8536201073139412,,
+grouping,Admixture type (14),none,,0.8968231482104606,,
+class_ablation,All class features removed,none,0.9172866382510959,0.8107120313644116,,
+SMD,Random folds,,,,0.11457410582755158,0.31240351262079924
+SMD,GroupKFold by class,,,,1.2081397361484214,4.555421852164091
