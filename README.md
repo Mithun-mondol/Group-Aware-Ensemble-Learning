@@ -2,7 +2,7 @@
 
 Data and code for:
 
-> Mondol, M., Saha, T., Mondol, P., Bala, A. K., Billah, M. M., & Haque, R.
+> Mondol M., Saha T., Bala A. K., Billah M. M., & Haque R.
 > *Group-Aware Ensemble Learning for Concrete Strength Prediction: A
 > Dual-Validation Framework that Quantifies the Generalisation Gap.*
 > Submitted to **Results in Engineering** (RINENG-D-26-11517).
